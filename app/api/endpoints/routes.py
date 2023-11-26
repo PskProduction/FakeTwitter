@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 
 from ...db.database import get_db
-from ...db.db_structure import User
+from ...db.db_structure import User, Followers, Followings
 
 router = APIRouter()
 
@@ -57,7 +57,10 @@ async def unfollow_user(api_key: str = Header('test')):
 async def user_info(api_key: str = Header('test'), db: Session = Depends(get_db)):
     if api_key is None:
         return {"error": "Не указан api-key"}
+
     user = db.query(User).filter(User.api_key == api_key).first()
+    followers = db.query(Followers).filter_by(my_id=user.id).all()
+    followings = db.query(Followings).filter_by(my_id=user.id).all()
 
     if user is None:
         return {"result": False, "message": "Пользователь не найден"}
@@ -65,29 +68,34 @@ async def user_info(api_key: str = Header('test'), db: Session = Depends(get_db)
     user_response = {
         "id": user.id,
         "name": user.username,
-        "followers": [{
-            "id": "int",
-            "name": "str"
-        }],
-        "following": [{
-            "id": "int",
-            "name": "str"
-        }]
+        "followers": [{"id": following.id_subscribers,
+                       "name": following.name_followers}
+                      for following in followings],
+        "following": [{"id": following.followings_id,
+                       "name": following.followings_name}
+                      for following in followers]
     }
 
     return {"result": True, "user": user_response}
 
-# @router.get('/api/users/{user_id}')
-# async def user_info_by_id(user_id: int) -> dict:
-#     another_user = db.get(User, user_id)
-#
-#     if another_user:
-#         return {
-#             "result": True,
-#             "user": {
-#                 "id": another_user.id,
-#                 "name": another_user.username,
-#                 "followers": [{}],
-#                 "following": [{}],
-#             }
-#         }
+
+@router.get('/api/users/{user_id}')
+async def user_info_by_id(user_id: int, db: Session = Depends(get_db)) -> dict:
+    another_user = db.get(User, user_id)
+
+    followers = db.query(Followers).filter_by(my_id=user_id).all()
+    followings = db.query(Followings).filter_by(my_id=user_id).all()
+    if another_user:
+        return {
+            "result": True,
+            "user": {
+                "id": another_user.id,
+                "name": another_user.username,
+                "followers": [{"id": following.id_subscribers,
+                               "name": following.name_followers}
+                              for following in followings],
+                "following": [{"id": following.followings_id,
+                               "name": following.followings_name}
+                              for following in followers],
+            }
+        }

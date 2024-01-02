@@ -3,7 +3,7 @@ import secrets
 from sqlalchemy.orm import relationship
 from sqlalchemy import Column, Integer, String, ForeignKey
 
-from app.db.database import Base
+from db.database import Base
 
 
 class Tweet(Base):

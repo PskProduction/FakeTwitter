@@ -2,14 +2,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from ..core import settings
+from core import settings
 
 DB_USER = settings.DB_USER
 DB_PASS = settings.DB_PASS
 DB_HOST = settings.DB_HOST
 DB_PORT = settings.DB_PORT
 DB_NAME = settings.DB_NAME
-DATABASE_URL = f'postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+DATABASE_URL = f'postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 
 engine = create_engine(DATABASE_URL, echo=True)
 

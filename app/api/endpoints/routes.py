@@ -7,8 +7,8 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from ..schemas.schemas import TweetData
-from ...db.database import get_db
-from ...db.models import User, Subscribers, Subscriptions, Tweet, Media, Like
+from db.database import get_db
+from db.models import User, Subscribers, Subscriptions, Tweet, Media, Like
 
 media_dir = 'media'
 if not os.path.exists(media_dir):

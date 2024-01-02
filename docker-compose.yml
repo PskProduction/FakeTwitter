@@ -1,0 +1,49 @@
+version: '3.9'
+
+services:
+  # nginx service
+  nginx:
+    container_name: nginx-twitter
+    build:
+      dockerfile: ./Dockerfile
+    depends_on:
+      - app
+    ports:
+      - "81:81"
+    working_dir: /usr/share/nginx/html/static
+
+# application service
+  app:
+    container_name: twitter
+    build:
+      dockerfile: app/Dockerfile
+    depends_on:
+      - postgres
+    ports:
+      - "8000:8000"
+    environment:
+      - .env
+    networks:
+      - web_app
+
+# database service
+  postgres:
+    image: postgres:16
+    container_name: postgres_db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_PORT: ${DB_PORT}
+      POSTGRES_HOST: ${DB_HOST}
+    networks:
+      - web_app
+    ports:
+      - "${DB_PORT}"
+
+networks:
+  web_app:
+    name: web_app
+    driver: bridge

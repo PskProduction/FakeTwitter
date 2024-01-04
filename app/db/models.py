@@ -97,6 +97,6 @@ class User(Base):
     def validate_api_key(cls, db: Session, api_key: str):
         user = cls.get_user_api_key(db, api_key)
         if not user:
-            raise HTTPException(status_code=404, detail='Sorry. Wrong api-key token. This user does not exist.')
+            raise HTTPException(status_code=401, detail='Sorry. Wrong api-key token. This user does not exist.')
         return user
 

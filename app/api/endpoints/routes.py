@@ -1,12 +1,10 @@
 import os
 import shutil
-from typing import List
 
 from fastapi import Header, Depends, HTTPException, APIRouter, UploadFile
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from ..schemas.schemas import TweetData
 from db.database import get_db
 from db.models import User, Subscribers, Subscriptions, Tweet, Media, Like
 
@@ -51,18 +49,19 @@ def get_tweets(
 # Фукция добавления нового твита
 @router.post("/api/tweets")
 async def create_tweet(
-        tweet_data: str,
-        tweet_media_ids: List[int] = [],
+        tweet_data: dict,
         api_key: str = Header(),
         db: Session = Depends(get_db)
 ):
     user = User.validate_api_key(db, api_key)
 
-    new_tweet = Tweet(text=tweet_data, user_id=user.id)
+    new_tweet = Tweet(text=tweet_data["tweet_data"], user_id=user.id)
 
     db.add(new_tweet)
     db.commit()
     db.refresh(new_tweet)
+
+    tweet_media_ids = tweet_data.get("tweet_media_ids", [])
 
     if tweet_media_ids:
         for media_id in tweet_media_ids:
@@ -259,7 +258,7 @@ async def user_info_by_id(
         user_id: int,
         db: Session = Depends(get_db)
 ) -> dict:
-    another_user = db.query(User).get(user_id)
+    another_user = db.query(User).filter(User.id == user_id).first()
 
     if another_user is None:
         raise HTTPException(status_code=404, detail="Пользователь не найден")

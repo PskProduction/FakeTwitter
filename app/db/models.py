@@ -1,6 +1,7 @@
 import secrets
 
-from sqlalchemy.orm import relationship
+from fastapi import HTTPException
+from sqlalchemy.orm import relationship, Session
 from sqlalchemy import Column, Integer, String, ForeignKey
 
 from db.database import Base
@@ -15,7 +16,7 @@ class Tweet(Base):
     count_likes = Column(Integer, default=0)
 
     author = relationship('User', back_populates='tweets')
-    medias = relationship('Media', back_populates='tweet')
+    media = relationship('Media', back_populates='tweet')
     likes = relationship('Like', back_populates='tweet', cascade='all, delete-orphan')
 
     def __repr__(self):
@@ -41,7 +42,7 @@ class Media(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
 
     user = relationship('User', back_populates='user_media')
-    tweet = relationship('Tweet', back_populates='medias')
+    tweet = relationship('Tweet', back_populates='media')
 
 
 class Subscribers(Base):
@@ -87,3 +88,15 @@ class User(Base):
 
     def __repr__(self):
         return f"Пользователь {self.username}"
+
+    @classmethod
+    def get_user_api_key(cls, db: Session, api_key: str):
+        return db.query(cls).filter(cls.api_key == api_key).first()
+
+    @classmethod
+    def validate_api_key(cls, db: Session, api_key: str):
+        user = cls.get_user_api_key(db, api_key)
+        if not user:
+            raise HTTPException(status_code=404, detail='Sorry. Wrong api-key token. This user does not exist.')
+        return user
+

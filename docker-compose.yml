@@ -10,9 +10,10 @@ services:
       - app
     ports:
       - "81:81"
-    working_dir: /usr/share/nginx/html/static
+    networks:
+      - web_app
 
-# application service
+  # application service
   app:
     container_name: twitter
     build:

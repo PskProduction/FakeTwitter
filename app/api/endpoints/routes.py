@@ -10,7 +10,7 @@ from ..schemas.schemas import TweetData
 from db.database import get_db
 from db.models import User, Subscribers, Subscriptions, Tweet, Media, Like
 
-media_dir = 'media'
+media_dir = 'static/images'
 if not os.path.exists(media_dir):
     os.makedirs(media_dir)
 
@@ -19,11 +19,11 @@ router = APIRouter()
 
 # Функция получения всех твитов
 @router.get('/api/tweets')
-def get_tweets(api_key: str = Header(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.api_key == api_key).first()
-
-    if user is None:
-        raise HTTPException(status_code=404, detail='Пользователь не найден')
+def get_tweets(
+        api_key: str = Header(),
+        db: Session = Depends(get_db)
+):
+    User.validate_api_key(db, api_key)
 
     tweets = db.query(Tweet).order_by(desc(Tweet.id)).all()
     tweets_response = [
@@ -51,41 +51,39 @@ def get_tweets(api_key: str = Header(), db: Session = Depends(get_db)):
 # Фукция добавления нового твита
 @router.post("/api/tweets")
 async def create_tweet(
-        tweet_data: TweetData,
+        tweet_data: str,
         tweet_media_ids: List[int] = [],
         api_key: str = Header(),
         db: Session = Depends(get_db)
 ):
-    user = db.query(User).filter(User.api_key == api_key).first()
+    user = User.validate_api_key(db, api_key)
 
-    if user is None:
-        raise HTTPException(status_code=404, detail='Пользователь не найден')
-
-    new_tweet = Tweet(text=tweet_data.content, user_id=user.id)
-
-    if tweet_media_ids:
-        for media_id in tweet_media_ids:
-            media = db.query(Media).filter(Media.id == media_id).first()
-            if media:
-                new_tweet.medias.append(media)
+    new_tweet = Tweet(text=tweet_data, user_id=user.id)
 
     db.add(new_tweet)
     db.commit()
     db.refresh(new_tweet)
 
+    if tweet_media_ids:
+        for media_id in tweet_media_ids:
+            media = db.query(Media).filter(Media.id == media_id).first()
+            if media:
+                new_tweet.media.append(media)
+                media.tweet_id = new_tweet.id
+
+    db.commit()
+
     return {"result": True, "tweet_id": new_tweet.id}
 
 
+# Функция загрузки изображений к твитам
 @router.post("/api/medias")
 async def upload_media(
         file: UploadFile,
         api_key: str = Header(),
         db: Session = Depends(get_db)
 ):
-    user = db.query(User).filter(User.api_key == api_key).first()
-
-    if user is None:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    user = User.validate_api_key(db, api_key)
 
     with open(f'{media_dir}/{file.filename}', 'wb') as image:
         shutil.copyfileobj(file.file, image)
@@ -93,17 +91,19 @@ async def upload_media(
     new_media = Media(image_url=file.filename, user_id=user.id)
     db.add(new_media)
     db.commit()
+    db.refresh(new_media)
 
     return {"result": True, "media_id": new_media.id}
 
 
 # Функция удаления твита по id
 @router.delete('/api/tweets/{tweet_id}')
-async def delete_tweet(tweet_id: int, api_key: str = Header(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.api_key == api_key).first()
-
-    if user is None:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
+async def delete_tweet(
+        tweet_id: int,
+        api_key: str = Header(),
+        db: Session = Depends(get_db)
+):
+    user = User.validate_api_key(db, api_key)
 
     tweet = db.query(Tweet).filter(Tweet.id == tweet_id, Tweet.user_id == user.id).first()
 
@@ -118,11 +118,12 @@ async def delete_tweet(tweet_id: int, api_key: str = Header(), db: Session = Dep
 
 # Функция для лайка твита
 @router.post('/api/tweets/{tweet_id}/likes')
-async def like_tweet(tweet_id: int, api_key: str = Header(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.api_key == api_key).first()
-
-    if user is None:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
+async def like_tweet(
+        tweet_id: int,
+        api_key: str = Header(),
+        db: Session = Depends(get_db)
+):
+    user = User.validate_api_key(db, api_key)
 
     tweet = db.query(Tweet).filter(Tweet.id == tweet_id).first()
 
@@ -139,11 +140,12 @@ async def like_tweet(tweet_id: int, api_key: str = Header(), db: Session = Depen
 
 # Функция для удаления лайка с твита
 @router.delete('/api/tweets/{tweet_id}/likes')
-async def unlike_tweet(tweet_id: int, api_key: str = Header(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.api_key == api_key).first()
-
-    if user is None:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
+async def unlike_tweet(
+        tweet_id: int,
+        api_key: str = Header(),
+        db: Session = Depends(get_db)
+):
+    user = User.validate_api_key(db, api_key)
 
     tweet = db.query(Tweet).filter(Tweet.id == tweet_id).first()
 
@@ -162,11 +164,12 @@ async def unlike_tweet(tweet_id: int, api_key: str = Header(), db: Session = Dep
 
 # Функция для подписки на пользователя
 @router.post('/api/users/{user_id}/follow')
-async def follow_user(user_id: int, api_key: str = Header(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.api_key == api_key).first()
-
-    if user is None:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
+async def follow_user(
+        user_id: int,
+        api_key: str = Header(),
+        db: Session = Depends(get_db)
+):
+    user = User.validate_api_key(db, api_key)
 
     subscriber = db.query(User).filter(User.id == user_id).first()
 
@@ -190,11 +193,12 @@ async def follow_user(user_id: int, api_key: str = Header(), db: Session = Depen
 
 # Функция для удаления подписки на пользователя
 @router.delete('/api/users/{user_id}/follow')
-async def unfollow_user(user_id: int, api_key: str = Header(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.api_key == api_key).first()
-
-    if user is None:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
+async def unfollow_user(
+        user_id: int,
+        api_key: str = Header(),
+        db: Session = Depends(get_db)
+):
+    user = User.validate_api_key(db, api_key)
 
     subscription = (
         db.query(Subscriptions)
@@ -218,11 +222,11 @@ async def unfollow_user(user_id: int, api_key: str = Header(), db: Session = Dep
 
 # Фукция получения информации о текущем пользователе
 @router.get('/api/users/me')
-async def user_info(api_key: str = Header(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.api_key == api_key).first()
-
-    if user is None:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
+async def user_info(
+        api_key: str = Header(),
+        db: Session = Depends(get_db)
+):
+    user = User.validate_api_key(db, api_key)
 
     subscriptions = db.query(Subscriptions).filter_by(subscriber_id=user.id).all()
     subscribers = db.query(Subscribers).filter_by(subscriber_id=user.id).all()
@@ -251,7 +255,10 @@ async def user_info(api_key: str = Header(), db: Session = Depends(get_db)):
 
 # Функция получения информации о другом пользователе
 @router.get('/api/users/{user_id}')
-async def user_info_by_id(user_id: int, db: Session = Depends(get_db)) -> dict:
+async def user_info_by_id(
+        user_id: int,
+        db: Session = Depends(get_db)
+) -> dict:
     another_user = db.query(User).get(user_id)
 
     if another_user is None:

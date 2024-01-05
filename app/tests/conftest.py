@@ -1,12 +1,10 @@
 import pytest
+from db.database import Base, get_db
+from db.models import User
 from fastapi.testclient import TestClient
+from main import app
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from db.models import User
-from main import app
-from db.database import Base
-from db.database import get_db
 
 DATABASE_URL = "sqlite:///./test.db"
 
@@ -40,7 +38,11 @@ def test_users(test_db):
 
     test_users = []
     for user_data in test_users_data:
-        existing_user = test_db.query(User).filter_by(username=user_data["username"]).first()
+        existing_user = (
+            test_db.query(User)
+            .filter_by(username=user_data["username"])
+            .first()
+        )
 
         if not existing_user:
             user = User(**user_data)
@@ -61,5 +63,5 @@ def test_app(test_db):
 
     app.dependency_overrides[get_db] = override_get_db
 
-    client = TestClient(app, base_url='http://127.0.0.1:8000')
+    client = TestClient(app, base_url="http://127.0.0.1:8000")
     return client

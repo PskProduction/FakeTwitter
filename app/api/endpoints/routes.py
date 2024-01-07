@@ -188,8 +188,12 @@ async def unfollow_user(
         )
         .first()
     )
-    if subscription:
-        db.delete(subscription)
+    if not subscription:
+        raise HTTPException(
+            status_code=400, detail="Вы не подписаны на этого пользователя"
+        )
+
+    db.delete(subscription)
 
     subscriber = (
         db.query(Subscribers)

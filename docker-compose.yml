@@ -12,7 +12,8 @@ services:
       - "81:81"
     networks:
       - web_app
-
+    volumes:
+      - ./app/static:/usr/share/nginx/html/static/:rw
   # application service
   app:
     container_name: twitter
@@ -26,6 +27,8 @@ services:
       - .env
     networks:
       - web_app
+    volumes:
+      - ./app/static/images:/app/static/images
 
 # database service
   postgres:

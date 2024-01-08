@@ -19,7 +19,7 @@
 1. Для приложения выполните следующие шаги:
 
 ```
-git clone https://gitlab.skillbox.ru/nikita_petrov_4/python_advanced_diploma
+git clone https://github.com/PskProduction/FakeTwitter.git
 ```
 
 2. Необходимо создать и заполнить файл виртуального окружения `.env` по образцу `env.template`.
